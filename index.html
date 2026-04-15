@@ -107,6 +107,11 @@
 <div id="gameContainer">
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     
+    <!-- 背景音樂 -->
+    <audio id="bgMusic" loop>
+        <source src="Avoid_the_Piston.mp3" type="audio/mpeg">
+    </audio>
+
     <div id="hud">
         分數: <span id="scoreDisplay">0</span> | 生命: <span id="livesDisplay">3</span>
     </div>
@@ -145,6 +150,8 @@ const gameOverScreen = document.getElementById('gameOverScreen');
 const startBtn = document.getElementById('startBtn');
 const restartBtn = document.getElementById('restartBtn');
 const finalScoreDisplay = document.getElementById('finalScore');
+const bgMusic = document.getElementById('bgMusic');
+bgMusic.volume = 0.5; // 可以在這裡調整音量 (0.0 到 1.0)
 
 // 讓畫布適應螢幕大小，但保持比例
 function resizeCanvas() {
@@ -647,6 +654,11 @@ function startGame() {
     startScreen.classList.remove('active');
     gameOverScreen.classList.remove('active');
     resetGame();
+    
+    // 開始播放音樂
+    bgMusic.currentTime = 0;
+    bgMusic.play().catch(e => console.warn('音訊播放被阻擋:', e));
+
     if(animationId) cancelAnimationFrame(animationId);
     gameLoop();
 }
@@ -655,6 +667,9 @@ function endGame() {
     gameState = 'GAMEOVER';
     finalScoreDisplay.innerText = score;
     gameOverScreen.classList.add('active');
+    
+    // 遊戲結束時暫停音樂
+    bgMusic.pause();
 }
 
 function gameLoop() {
