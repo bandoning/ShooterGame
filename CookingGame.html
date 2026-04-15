@@ -239,6 +239,9 @@
         <div id="btn-interact">互動</div>
     </div>
 
+    <!-- 背景音樂 -->
+    <audio id="bgm" src="The_Sauce_Is_Burning.mp3" loop preload="auto" style="display:none;"></audio>
+
     <script>
         /**
          * 遊戲核心邏輯
@@ -252,6 +255,8 @@
         const ordersContainer = document.getElementById('orders-container');
         const gameOverText = document.getElementById('game-over-text');
         const tutorialText = document.getElementById('tutorial-text');
+        // 取得背景音樂元素
+        const bgm = document.getElementById('bgm');
 
         // 遊戲狀態與常數
         let gameState = 'menu'; // 'menu', 'playing', 'gameover'
@@ -341,6 +346,10 @@
             lastTime = performance.now();
             updateUI();
             requestAnimationFrame(gameLoop);
+
+            // 播放音樂 (需要使用者互動才能觸發)
+            bgm.currentTime = 0;
+            bgm.play().catch(e => console.warn("BGM autoplay blocked by browser policy"));
             
             // 初始產生兩個訂單
             generateOrder();
@@ -350,6 +359,10 @@
         // 結束遊戲
         function endGame() {
             gameState = 'gameover';
+
+            // 停止音樂
+            bgm.pause();
+
             menuLayer.classList.remove('hidden');
             document.querySelector('.title').innerHTML = '時間到！';
             gameOverText.innerHTML = `你的最終分數是: <span style="color:#f1c40f; font-size:1.5rem; font-weight:bold;">${score}</span> 分<br>準備好再挑戰一次了嗎？`;
