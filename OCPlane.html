@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智慧現金流預測與動態預警系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5', // Indigo 600
+                        secondary: '#10B981', // Emerald 500
+                        warning: '#F59E0B', // Amber 500
+                        danger: '#EF4444', // Red 500
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自定義滾動條 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* 呼吸燈動畫 */
+        @keyframes pulse-border {
+            0% { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .alert-pulse {
+            animation: pulse-border 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col md:flex-row">
+
+    <!-- 側邊欄 (Sidebar) -->
+    <aside class="w-full md:w-64 bg-white border-r border-slate-200 hidden md:flex flex-col shadow-sm sticky top-0 h-screen z-10">
+        <div class="p-6 flex items-center gap-3 border-b border-slate-100">
+            <div class="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center text-xl font-bold">
+                <i class="ph ph-robot"></i>
+            </div>
+            <h1 class="font-bold text-lg leading-tight">AI 財務導航<span class="block text-xs text-slate-400 font-normal">CashFlow Pro</span></h1>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="#" class="flex items-center gap-3 px-4 py-3 bg-primary/10 text-primary rounded-lg font-medium">
+                <i class="ph ph-squares-four text-xl"></i>
+                總覽儀表板
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <i class="ph ph-chart-line-up text-xl"></i>
+                消耗速率分析
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <i class="ph ph-calendar-check text-xl"></i>
+                週期性支出
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <i class="ph ph-magic-wand text-xl"></i>
+                What-If 推演
+            </a>
+        </nav>
+        <div class="p-4 border-t border-slate-100">
+            <div class="flex items-center gap-3">
+                <img src="https://ui-avatars.com/api/?name=User&background=cbd5e1&color=fff" alt="User" class="w-10 h-10 rounded-full">
+                <div>
+                    <p class="text-sm font-medium">使用者</p>
+                    <p class="text-xs text-slate-500">標準方案</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 行動版頂部導航 -->
+    <header class="md:hidden bg-white p-4 border-b border-slate-200 flex justify-between items-center sticky top-0 z-20">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center">
+                <i class="ph ph-robot"></i>
+            </div>
+            <span class="font-bold">AI 財務導航</span>
+        </div>
+        <button class="text-2xl text-slate-600"><i class="ph ph-list"></i></button>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full overflow-y-auto">
+        
+        <header class="mb-8 flex justify-between items-end">
+            <div>
+                <p class="text-sm text-slate-500 mb-1">今天是 11 號，距離發薪日還有 19 天</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-slate-800">早安！您的 AI 財務導航已上線</h2>
+            </div>
+        </header>
+
+        <!-- 核心場景：預防性行為引導 (Proactive Nudge) - 20 號電信費危機 -->
+        <div class="mb-8 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-400 rounded-2xl p-5 md:p-6 shadow-sm alert-pulse relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                <i class="ph-fill ph-warning-circle text-9xl text-red-600"></i>
+            </div>
+            <div class="flex items-start gap-4 relative z-10">
+                <div class="bg-red-100 text-red-600 p-3 rounded-full mt-1 shrink-0">
+                    <i class="ph ph-siren text-2xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">AI 動態預警</span>
+                        <span class="text-red-700 font-bold text-lg">未來現金流短缺風險！</span>
+                    </div>
+                    <p class="text-slate-700 leading-relaxed mb-4">
+                        嘿！偵測到您在 1 號到 10 號的外食支出異常升高（斜率過大）。
+                        <br>
+                        <strong>預測：</strong> 按照目前速度，18 號時帳戶餘額將低於 1,000 元。
+                        <br>
+                        <strong>危機：</strong> 20 號有 <span class="font-bold text-red-600 border-b border-red-300">1,200 元的電信費</span> 要繳，將會扣款失敗！
+                    </p>
+                    <div class="bg-white/60 p-4 rounded-xl border border-red-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex items-center gap-3 text-slate-700">
+                            <i class="ph ph-lightbulb text-warning text-xl"></i>
+                            <span><strong>AI 建議：</strong> 如果這週能將午餐預算控制在 100 元內，就能平安渡過！</span>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto shrink-0">
+                            <button onclick="acceptAdvice()" class="flex-1 md:flex-none px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors">
+                                接受建議並設定預算
+                            </button>
+                            <button class="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-sm font-medium transition-colors">
+                                查看詳情
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            
+            <!-- 動態消耗速率分析 (Burn Rate Analysis) -->
+            <div class="lg:col-span-2 glass-card rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <i class="ph ph-trend-down text-primary"></i> 動態消耗速率 (Burn Rate)
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">實時計算日均消費斜率與未來預測</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-slate-500">當前可用餘額</p>
+                        <p class="text-2xl font-bold text-slate-800">$4,500</p>
+                    </div>
+                </div>
+                
+                <div class="flex-1 relative w-full h-[250px]">
+                    <canvas id="burnRateChart"></canvas>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
+                    <div class="text-center">
+                        <p class="text-xs text-slate-500 mb-1">1-10號 日均消耗</p>
+                        <p class="font-bold text-danger">-$850/日</p>
+                    </div>
+                    <div class="text-center border-l border-slate-100">
+                        <p class="text-xs text-slate-500 mb-1">安全日均消耗上限</p>
+                        <p class="font-bold text-secondary">-$350/日</p>
+                    </div>
+                    <div class="text-center border-l border-slate-100">
+                        <p class="text-xs text-slate-500 mb-1">預測月底結餘</p>
+                        <p class="font-bold text-danger">-$1,800</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 週期性模式辨識 (Recurring Pattern Recognition) -->
+            <div class="glass-card rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="font-bold text-lg flex items-center gap-2">
+                        <i class="ph ph-calendar-repeat text-primary"></i> 未來必經路段
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-1">AI 掃描歷史數據自動辨識之固定支出</p>
+                </div>
+                
+                <div class="space-y-4 flex-1 overflow-y-auto pr-2">
+                    <!-- 項目 1 -->
+                    <div class="bg-red-50 border border-red-100 rounded-xl p-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-red-500">
+                                <i class="ph ph-device-mobile text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">中華電信月租費</p>
+                                <p class="text-xs text-red-600 font-medium">9 天後 (本月 20 號)</p>
+                            </div>
+                        </div>
+                        <p class="font-bold text-slate-800">$1,200</p>
+                    </div>
+
+                    <!-- 項目 2 -->
+                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-primary">
+                                <i class="ph ph-house text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">房屋租金</p>
+                                <p class="text-xs text-slate-500">14 天後 (本月 25 號)</p>
+                            </div>
+                        </div>
+                        <p class="font-bold text-slate-800">$8,500</p>
+                    </div>
+
+                    <!-- 項目 3 -->
+                    <div class="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-primary">
+                                <i class="ph ph-spotify-logo text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">Spotify 訂閱</p>
+                                <p class="text-xs text-slate-500">17 天後 (本月 28 號)</p>
+                            </div>
+                        </div>
+                        <p class="font-bold text-slate-800">$149</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-sm">
+                    <span class="text-slate-500">本月固定支出總計</span>
+                    <span class="font-bold text-slate-800">$9,849</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 預防性行為引導：What-if 情境推演 -->
+        <div class="glass-card rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-primary/5 p-6 border-b border-primary/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h3 class="font-bold text-lg flex items-center gap-2 text-primary">
+                        <i class="ph ph-magic-wand text-xl"></i> 購物前問問 AI (What-if 模擬)
+                    </h3>
+                    <p class="text-sm text-slate-600 mt-1">想買東西嗎？讓 AI 幫你推演這筆花費對月底現金流的影響。</p>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="flex flex-col md:flex-row gap-4 items-end">
+                    <div class="flex-1 w-full">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">你想買什麼？</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="ph ph-shopping-bag text-slate-400"></i>
+                            </div>
+                            <input type="text" id="itemName" placeholder="例如：限量版球鞋" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                        </div>
+                    </div>
+                    <div class="w-full md:w-48">
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">預計花費 (元)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-slate-400">$</span>
+                            </div>
+                            <input type="number" id="itemPrice" placeholder="3000" class="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all">
+                        </div>
+                    </div>
+                    <button onclick="runSimulation()" class="w-full md:w-auto px-6 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="ph ph-sparkle"></i> 開始推演
+                    </button>
+                </div>
+
+                <!-- 模擬結果區塊 (預設隱藏) -->
+                <div id="simulationResult" class="hidden mt-6 rounded-xl border p-5 transition-all duration-300">
+                    <div class="flex items-start gap-4">
+                        <div id="resultIcon" class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-2xl">
+                            <!-- 圖示將透過 JS 插入 -->
+                        </div>
+                        <div class="flex-1">
+                            <h4 id="resultTitle" class="font-bold text-lg mb-1"></h4>
+                            <p id="resultText" class="text-slate-700 text-sm leading-relaxed mb-3"></p>
+                            
+                            <!-- 缺口視覺化 -->
+                            <div id="gapVisual" class="hidden bg-white/50 p-3 rounded-lg border border-red-100">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-500">購買後餘額</span>
+                                    <span class="text-slate-500">20號 電信費需求</span>
+                                </div>
+                                <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden flex">
+                                    <div class="bg-primary h-full" style="width: 58%;"></div>
+                                    <div class="bg-red-400 h-full progress-stripes" style="width: 42%;"></div>
+                                </div>
+                                <div class="flex justify-between text-xs mt-1 font-bold">
+                                    <span class="text-primary" id="remainBal"></span>
+                                    <span class="text-red-500">缺口 <span id="gapAmount"></span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer class="mt-12 text-center text-sm text-slate-400 pb-8">
+            <p>AI 智慧現金流預測與動態預警系統 &copy; 2026</p>
+            <p class="mt-1">從「記錄過去」到「導航未來」</p>
+        </footer>
+    </main>
+
+    <!-- 條紋背景 CSS for 進度條 -->
+    <style>
+        .progress-stripes {
+            background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+            background-size: 1rem 1rem;
+        }
+    </style>
+
+    <script>
+        // --- 1. 繪製動態消耗速率 (Burn Rate) 圖表 ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('burnRateChart').getContext('2d');
+            
+            // X 軸：本月日期 (1~30號)
+            const labels = Array.from({length: 30}, (_, i) => `${i + 1}號`);
+            
+            // Y 軸資料邏輯模擬
+            const initialBalance = 13000;
+            // 實際發生 (1~11號)：花費極快
+            const actualData = [13000, 12500, 11800, 11000, 9500, 8800, 7500, 6800, 6000, 5200, 4500, ...Array(19).fill(null)];
+            
+            // AI 預測軌跡 (照原速度繼續花) -> 18號破產
+            const projectedData = [...Array(10).fill(null), 4500, 3650, 2800, 1950, 1100, 250, -600, -1450, -2300, -3150, -4000, -4850, -5700, -6550, -7400, -8250, -9100, -9950, -10800];
+            
+            // AI 建議軌跡 (控制午餐預算後) -> 緩降，平安扣款
+            const adviceData = [...Array(10).fill(null), 4500, 4150, 3800, 3450, 3100, 2750, 2400, 2050, 1700, 500 /* 20號扣1200電信費 */, 400, 300, 200, 100, 50, 0, -50, -100, -150, -200];
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '實際消耗 (已發生)',
+                            data: actualData,
+                            borderColor: '#64748B', // Slate 500
+                            backgroundColor: 'rgba(100, 116, 139, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0,
+                            pointHitRadius: 10
+                        },
+                        {
+                            label: '當前斜率預測 (危險)',
+                            data: projectedData,
+                            borderColor: '#EF4444', // Red 500
+                            borderWidth: 2,
+                            borderDash: [5, 5], // 虛線
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'AI 建議軌跡 (安全)',
+                            data: adviceData,
+                            borderColor: '#10B981', // Emerald 500
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8,
+                                font: { family: "'Noto Sans TC', sans-serif" }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { family: "'Noto Sans TC', sans-serif", size: 13 },
+                            bodyFont: { family: "'Noto Sans TC', sans-serif", size: 13 },
+                            padding: 10,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        annotation: {
+                            // 可選：若有匯入 chartjs-plugin-annotation 可以畫水平線
+                            // 這裡簡化處理，透過資料集視覺化
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: (context) => context.tick.value === 0 ? 'rgba(239, 68, 68, 0.5)' : 'rgba(226, 232, 240, 0.5)',
+                                lineWidth: (context) => context.tick.value === 0 ? 2 : 1,
+                            },
+                            ticks: {
+                                callback: function(value) { return '$' + value; },
+                                font: { family: "'Noto Sans TC', sans-serif" }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { family: "'Noto Sans TC', sans-serif" }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // --- 2. What-if 情境推演邏輯 ---
+        function runSimulation() {
+            const itemName = document.getElementById('itemName').value || '未命名物品';
+            const priceInput = document.getElementById('itemPrice').value;
+            const price = parseInt(priceInput, 10);
+            const resultBox = document.getElementById('simulationResult');
+            const iconBox = document.getElementById('resultIcon');
+            const titleEl = document.getElementById('resultTitle');
+            const textEl = document.getElementById('resultText');
+            const gapVisual = document.getElementById('gapVisual');
+            
+            // 防呆
+            if (isNaN(price) || price <= 0) {
+                alert("請輸入有效的金額！");
+                return;
+            }
+
+            // 狀態變數 (對應當前餘額與 20 號固定支出)
+            const currentBalance = 4500; 
+            const telecomBill = 1200;
+            // 簡化計算：假設到 20 號前，最低生存必需花費 (例如吃喝) 還需要 2000 元
+            const requiredLivingCost = 2000; 
+            const totalRequired = telecomBill + requiredLivingCost; // 3200
+            
+            // 購買後剩餘可用 (扣除生存所需後，還剩多少可以繳帳單)
+            const balanceAfterPurchase = currentBalance - price;
+            const availableForBill = balanceAfterPurchase - requiredLivingCost;
+
+            // 顯示結果區塊
+            resultBox.classList.remove('hidden');
+            gapVisual.classList.add('hidden'); // 預設隱藏缺口條
+
+            if (availableForBill < telecomBill) {
+                // 發生危機 (如 prompt 中的：購買球鞋導致 20 號電信費出現缺口)
+                const gap = telecomBill - availableForBill; // 計算缺口
+                
+                resultBox.className = "mt-6 rounded-xl border p-5 transition-all duration-300 bg-red-50 border-red-200";
+                iconBox.className = "w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-2xl bg-red-100 text-red-600";
+                iconBox.innerHTML = '<i class="ph ph-warning"></i>';
+                
+                titleEl.className = "font-bold text-lg mb-1 text-red-800";
+                titleEl.innerText = "⚠️ 警告：這筆消費將導致固定帳單違約！";
+                
+                textEl.innerHTML = `如果你現在購買「${itemName}」，扣除每日基本開銷後，<strong>20 號的電信費將會出現 ${gap} 元的缺口</strong>。強烈建議延後到下個月發薪後再購買！`;
+                
+                // 顯示缺口視覺化
+                gapVisual.classList.remove('hidden');
+                document.getElementById('remainBal').innerText = `$${Math.max(0, availableForBill)}`;
+                document.getElementById('gapAmount').innerText = `$${gap}`;
+                
+                // 計算進度條比例
+                const safeRatio = Math.max(0, (availableForBill / telecomBill) * 100);
+                const gapRatio = 100 - safeRatio;
+                gapVisual.querySelector('.bg-primary').style.width = `${safeRatio}%`;
+                gapVisual.querySelector('.bg-red-400').style.width = `${gapRatio}%`;
+
+            } else if (availableForBill >= telecomBill && availableForBill < telecomBill + 1500) {
+                // 緊繃
+                resultBox.className = "mt-6 rounded-xl border p-5 transition-all duration-300 bg-warning/10 border-warning/30";
+                iconBox.className = "w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-2xl bg-warning/20 text-warning";
+                iconBox.innerHTML = '<i class="ph ph-bell"></i>';
+                
+                titleEl.className = "font-bold text-lg mb-1 text-yellow-800";
+                titleEl.innerText = "可以買，但下半月會過得很辛苦";
+                
+                textEl.innerHTML = `購買「${itemName}」後，雖然還繳得出 20 號的電信費，但您到月底的日均可用餘額將只剩下約 ${(availableForBill - telecomBill)/10} 元。請謹慎考慮。`;
+            } else {
+                // 安全
+                resultBox.className = "mt-6 rounded-xl border p-5 transition-all duration-300 bg-emerald-50 border-emerald-200";
+                iconBox.className = "w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-2xl bg-emerald-100 text-emerald-600";
+                iconBox.innerHTML = '<i class="ph ph-check-circle"></i>';
+                
+                titleEl.className = "font-bold text-lg mb-1 text-emerald-800";
+                titleEl.innerText = "沒問題！在您的安全負擔範圍內";
+                
+                textEl.innerHTML = `購買「${itemName}」不會影響到您 20 號的電信費及 25 號的房租繳交。您的現金流依然十分健康，開心購物吧！`;
+            }
+        }
+
+        // 互動按鈕模擬
+        function acceptAdvice() {
+            alert("已為您設定「午餐預算 $100/日」追蹤模式。每日超過時將會發送輕量提醒！");
+            // 將警告區塊淡出或改變樣式
+            const alertBox = document.querySelector('.alert-pulse');
+            alertBox.classList.remove('alert-pulse');
+            alertBox.classList.replace('from-red-50', 'from-emerald-50');
+            alertBox.classList.replace('to-orange-50', 'to-teal-50');
+            alertBox.classList.replace('border-red-400', 'border-emerald-400');
+            alertBox.innerHTML = `
+                <div class="flex items-center gap-3 relative z-10 p-2">
+                    <div class="bg-emerald-100 text-emerald-600 p-2 rounded-full">
+                        <i class="ph ph-check-circle text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-emerald-800 font-bold text-lg">危機已解除</span>
+                        <p class="text-emerald-700 text-sm">已套用 AI 建議：本週午餐預算 $100。現金流已回到安全軌道！</p>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
