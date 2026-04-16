@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad-Mute: 基於 LLM 語意辨識的無縫觀影外掛</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace'],
+                    },
+                    colors: {
+                        primary: '#3b82f6', // blue-500
+                        secondary: '#8b5cf6', // purple-500
+                        dark: '#0f172a', // slate-900
+                        card: '#1e293b', // slate-800
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自訂進度條動畫 */
+        @keyframes playhead-move {
+            0% { left: 0%; }
+            30% { left: 30%; } /* 到達業配紅區起點 */
+            31% { left: 60%; } /* 瞬間跳躍至業配紅區終點 */
+            100% { left: 100%; }
+        }
+        .playhead {
+            animation: playhead-move 6s infinite linear;
+        }
+        .ad-zone {
+            left: 30%;
+            width: 30%;
+        }
+    </style>
+</head>
+<body class="bg-dark text-gray-200 font-sans antialiased selection:bg-primary selection:text-white">
+
+    <!-- Hero 區塊 -->
+    <header class="relative overflow-hidden bg-gradient-to-b from-slate-800 to-dark pt-20 pb-16">
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+        <div class="container mx-auto px-6 relative z-10 text-center">
+            <div class="inline-block mb-4 px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-medium tracking-wide">
+                <i class="fa-solid fa-robot mr-2"></i> 專題提案展示
+            </div>
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 tracking-tight text-white">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Ad-Mute</span> 
+                <br class="hidden md:block"> 基於 LLM 語意辨識的無縫觀影外掛
+            </h1>
+            <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-8 leading-relaxed">
+                告別突如其來的業配干擾！不需自行架設龐大主機，透過網頁版第三方播放器或 Chrome Extension，讓 AI 為你還原最純粹的觀影體驗。
+            </p>
+            
+            <!-- 視覺化動畫展示區 -->
+            <div class="max-w-3xl mx-auto mt-12 bg-slate-900 p-6 rounded-2xl border border-slate-700 shadow-2xl">
+                <div class="flex items-center justify-between mb-4 text-sm text-gray-400 font-mono">
+                    <span>0:00</span>
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-magic text-purple-400"></i> AI 正在監控影片時間軸</span>
+                    <span>10:00</span>
+                </div>
+                <!-- 播放進度條 -->
+                <div class="relative w-full h-4 bg-gray-700 rounded-full overflow-hidden flex">
+                    <!-- 正常區段 1 -->
+                    <div class="h-full bg-blue-500 opacity-50" style="width: 30%;"></div>
+                    <!-- 業配紅區 (AI 標記) -->
+                    <div class="absolute h-full bg-red-500/80 ad-zone flex items-center justify-center text-[10px] font-bold text-white tracking-widest overflow-hidden ad-zone">
+                        業配時段 (AI 已標記)
+                    </div>
+                    <!-- 正常區段 2 -->
+                    <div class="absolute h-full bg-blue-500 opacity-50" style="left: 60%; width: 40%;"></div>
+                    
+                    <!-- 播放頭 (Playhead) -->
+                    <div class="absolute h-full w-1 bg-white shadow-[0_0_10px_#fff] playhead rounded-full z-10"></div>
+                </div>
+                <div class="mt-4 text-center text-sm text-gray-500">
+                    <i class="fa-solid fa-forward-step text-red-400 mr-1"></i> 當進度條接觸紅區，播放器將瞬間觸發 <code class="bg-gray-800 text-purple-300 px-1 py-0.5 rounded">player.seekTo(結束時間)</code>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 技術 Roadmap 區塊 -->
+    <section class="py-20 container mx-auto px-6">
+        <h2 class="text-3xl font-bold text-center mb-16 text-white flex items-center justify-center gap-3">
+            <i class="fa-solid fa-route text-blue-400"></i> 系統運作流程 (技術 Roadmap)
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Step 1 -->
+            <div class="bg-card rounded-2xl p-8 border border-slate-700 hover:border-blue-500/50 transition-all duration-300 group hover:-translate-y-1">
+                <div class="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400 text-2xl mb-6 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-file-lines"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-3 text-white">Step 1: 獲取逐字稿 <br><span class="text-sm font-normal text-blue-400">Data Extraction</span></h3>
+                <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                    使用者貼上 YouTube 連結後，系統後端利用開源套件瞬間抓取該影片的 CC 字幕檔案與每一句的時間軸 (Timestamps)。
+                </p>
+                <div class="bg-black/50 p-3 rounded-lg border border-slate-600 font-mono text-xs text-gray-300">
+                    <span class="text-green-400">import</span> youtube_transcript_api<br>
+                    <span class="text-blue-300">transcript</span> = YouTubeTranscriptApi.<span class="text-yellow-200">get_transcript</span>(video_id)
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="bg-card rounded-2xl p-8 border border-slate-700 hover:border-purple-500/50 transition-all duration-300 group hover:-translate-y-1 relative">
+                <div class="absolute -top-3 -right-3">
+                    <span class="bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg border border-purple-400">核心大腦</span>
+                </div>
+                <div class="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center text-purple-400 text-2xl mb-6 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-3 text-white">Step 2: AI 核心判斷 <br><span class="text-sm font-normal text-purple-400">The "Brain"</span></h3>
+                <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                    將抓下來的逐字稿餵給大型語言模型（如串接 Gemini API），進行精準的語意分析，找出業配紅區。
+                </p>
+                <div class="bg-black/50 p-3 rounded-lg border border-slate-600 font-mono text-xs text-gray-300 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 bg-slate-700 text-[10px] px-2 py-1 rounded-bl-lg">Prompt</div>
+                    <span class="text-gray-400">"你是一個廣告辨識專家。請閱讀以下帶有時間軸的影片逐字稿，找出哪裡開始是創作者的『工商服務/業配時間』，哪裡結束並回歸正題。請回傳該段落的開始與結束時間。"</span>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="bg-card rounded-2xl p-8 border border-slate-700 hover:border-green-500/50 transition-all duration-300 group hover:-translate-y-1">
+                <div class="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center text-green-400 text-2xl mb-6 group-hover:scale-110 transition-transform">
+                    <i class="fa-brands fa-youtube"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-3 text-white">Step 3: 播放器聯動 <br><span class="text-sm font-normal text-green-400">UI/UX Execution</span></h3>
+                <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                    前端網頁使用 YouTube IFrame API 播放影片。程式隨時監聽播放時間，當進入「業配紅區」時，瞬間無縫跳過！
+                </p>
+                <div class="bg-black/50 p-3 rounded-lg border border-slate-600 font-mono text-xs text-gray-300">
+                    <span class="text-purple-400">if</span> (currentTime >= adStartTime) {<br>
+                    &nbsp;&nbsp;<span class="text-gray-500">// 瞬間跳轉至業配結束點</span><br>
+                    &nbsp;&nbsp;<span class="text-blue-300">player</span>.<span class="text-yellow-200">seekTo</span>(adEndTime, <span class="text-orange-400">true</span>);<br>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 專題亮點與防禦性說法 -->
+    <section class="py-20 bg-slate-800/50 border-y border-slate-700">
+        <div class="container mx-auto px-6 max-w-5xl">
+            <h2 class="text-3xl font-bold text-center mb-16 text-white">
+                <i class="fa-solid fa-shield-halved text-primary mr-3"></i> 專題亮點與防禦策略 (Q&A 準備)
+            </h2>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- 亮點 -->
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl border-l-4 border-l-blue-500 shadow-lg">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-lightbulb text-2xl text-yellow-400"></i>
+                        <h3 class="text-2xl font-bold text-white">核心亮點：真正的「語意理解」</h3>
+                    </div>
+                    <p class="text-gray-300 leading-relaxed mb-4">
+                        這<span class="text-red-400 font-bold">不是</span>傳統暴力的「關鍵字比對」（只抓"贊助"兩個字很容易造成正片誤判）。
+                    </p>
+                    <p class="text-gray-300 leading-relaxed">
+                        LLM 具備上下文理解能力。AI 看得懂創作者是在講述正片故事（例如劇情解說），還是突然開始推銷洗面乳或手遊。這種**上下文感知能力**大幅降低了誤判率，是傳統演算法無法做到的。
+                    </p>
+                </div>
+
+                <!-- 防禦點 -->
+                <div class="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl border-l-4 border-l-purple-500 shadow-lg">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-coins text-2xl text-yellow-500"></i>
+                        <h3 class="text-2xl font-bold text-white">防禦點：Token 成本與效能優化</h3>
+                    </div>
+                    <p class="text-gray-400 italic mb-4 text-sm border-b border-slate-700 pb-3">
+                        教授提問預測：「把一小時的影片逐字稿全丟給 AI，API 成本不會太高？速度不會太慢嗎？」
+                    </p>
+                    <ul class="space-y-3 text-gray-300">
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-green-400 mt-1"></i>
+                            <span><strong class="text-white">區塊抽樣策略：</strong>我們發現業配大多集中在影片前 3 分鐘或特定轉折點。AI 可優先分析高機率區段。</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-green-400 mt-1"></i>
+                            <span><strong class="text-white">雙層過濾機制 (Hybrid Filter)：</strong>先用輕量化演算法（如 TF-IDF 或關鍵字頻率）過濾出「疑似」廣告的段落，再將該段落交給 LLM 進行最終確認，可節省 80% 以上的 Token 消耗。</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark py-8 text-center border-t border-slate-800">
+        <p class="text-gray-500 text-sm">
+            &copy; 2026 Ad-Mute Project Team. All rights reserved. <br>
+            <span class="text-xs mt-2 inline-block">Powered by LLM Semantic Analysis & YouTube IFrame API</span>
+        </p>
+    </footer>
+
+</body>
+</html>
