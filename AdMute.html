@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ad-Mute | AI 業配偵測與自動跳轉模擬器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        yt: '#ff0000',
+                        darkBg: '#0f0f0f',
+                        panelBg: '#212121',
+                        adHighlight: '#ca8a04', // Yellow-600
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0f0f0f; color: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #212121; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        
+        /* 掃描動畫 */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #ca8a04;
+            box-shadow: 0 0 10px #ca8a04, 0 0 20px #ca8a04;
+            animation: scan 1.5s infinite linear;
+            display: none;
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        /* 漸變底色 */
+        .ad-bg-active {
+            background-color: rgba(202, 138, 4, 0.15);
+            border-left: 4px solid #ca8a04;
+        }
+
+        /* Toast 動畫 */
+        .toast-enter {
+            animation: slideInUp 0.3s ease-out forwards;
+        }
+        @keyframes slideInUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-panelBg border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="bg-yt p-2 rounded-lg">
+                <i data-lucide="scissors" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wider">Ad-Mute <span class="text-gray-400 text-sm font-normal ml-2">基於 LLM 的智慧跳轉外掛</span></h1>
+            </div>
+        </div>
+        <div class="hidden sm:flex items-center gap-2 text-sm text-gray-400">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            AI 模型：Gemini-Pro-Vision 模擬
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左側：影片播放器模擬區 -->
+        <div class="lg:col-span-7 space-y-4">
+            
+            <!-- 播放器本體 -->
+            <div class="bg-black aspect-video rounded-xl relative overflow-hidden border border-gray-800 flex flex-col shadow-2xl group">
+                <!-- 掃描特效線 -->
+                <div id="video-scan-line" class="scan-line"></div>
+
+                <!-- 模擬影片畫面 -->
+                <div class="flex-1 flex flex-col items-center justify-center relative">
+                    <i id="status-icon" data-lucide="play-circle" class="w-20 h-20 text-gray-600 mb-4 transition-all"></i>
+                    <p id="video-text" class="text-gray-500 font-medium tracking-widest text-lg">影片就緒 (總長 3:00)</p>
+                    
+                    <!-- 提示 Toast (跳躍時顯示) -->
+                    <div id="skip-toast" class="absolute top-6 bg-yellow-600 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 opacity-0 transition-opacity duration-300">
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        AI 已自動為您跳過業配片段！
+                    </div>
+                </div>
+
+                <!-- 控制列 -->
+                <div class="absolute bottom-0 w-full bg-gradient-to-t from-black/90 to-transparent p-4 opacity-100 transition-opacity">
+                    <!-- 進度條 -->
+                    <div id="progress-container" class="w-full h-1.5 bg-gray-600/50 rounded-full mb-4 relative cursor-pointer hover:h-2 transition-all">
+                        <!-- AI 標記的紅區 (廣告區段) -->
+                        <div id="ad-marker" class="absolute h-full bg-yellow-500/60 hidden pointer-events-none" style="left: 25%; width: 16.66%;"></div>
+                        <!-- 播放進度 -->
+                        <div id="progress-fill" class="absolute h-full bg-yt rounded-full relative" style="width: 0%;">
+                            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-yt rounded-full scale-0 group-hover:scale-100 transition-transform"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 按鈕區 -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <button id="btn-play" class="hover:text-yt transition-colors">
+                                <i data-lucide="play" class="w-6 h-6" id="play-icon"></i>
+                            </button>
+                            <span id="time-display" class="text-sm font-mono text-gray-300">0:00 / 3:00</span>
+                        </div>
+
+                        <!-- 自動跳過開關 -->
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-300">自動跳過業配</span>
+                            <button id="toggle-skip" class="w-10 h-5 bg-yellow-600 rounded-full relative transition-colors focus:outline-none">
+                                <div id="toggle-knob" class="w-4 h-4 bg-white rounded-full absolute top-0.5 left-[22px] transition-all"></div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="bg-panelBg p-5 rounded-xl border border-gray-800 shadow-md">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-lg flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-5 h-5 text-blue-400"></i>
+                        AI 核心控制
+                    </h2>
+                    <span id="ai-status-badge" class="px-2 py-1 text-xs rounded-full bg-gray-800 text-gray-400 border border-gray-700">待機中</span>
+                </div>
+                <p class="text-sm text-gray-400 mb-5">點擊下方按鈕，系統將擷取影片逐字稿，並呼叫 LLM 分析內容語意，自動標記出「非正片」的工商服務區段。</p>
+                <button id="btn-analyze" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                    <span>開始 AI 語意分析</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 右側：逐字稿與分析面板 -->
+        <div class="lg:col-span-5 flex flex-col h-[600px] bg-panelBg rounded-xl border border-gray-800 shadow-md overflow-hidden relative">
+            <div class="p-4 border-b border-gray-800 bg-panelBg z-10">
+                <h3 class="font-bold flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5 text-gray-400"></i>
+                    即時逐字稿解析
+                </h3>
+            </div>
+            
+            <div id="transcript-container" class="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-4 text-sm text-gray-400 leading-relaxed relative">
+                <!-- 掃描特效線 -->
+                <div id="text-scan-line" class="scan-line" style="background: #3b82f6; box-shadow: 0 0 10px #3b82f6;"></div>
+
+                <!-- Part 1: 正常開場 -->
+                <div id="text-p1" class="p-3 rounded-lg border border-transparent transition-colors relative cursor-pointer hover:bg-gray-800/50" onclick="seekToText(0)">
+                    <span class="text-xs font-mono text-gray-500 mr-2">0:00 - 0:44</span>
+                    大家好，歡迎回到我的頻道。今天我們要來開箱最新的超旗艦手機！相信大家對這支手機的相機規格期待已久，我上週拿到了實體機，測了幾天覺得非常震撼。
+                </div>
+
+                <!-- Part 2: 業配區段 -->
+                <div id="text-ad" class="p-3 rounded-lg border border-transparent transition-all duration-700 relative cursor-pointer" onclick="seekToText(45)">
+                    <div id="ad-badge" class="absolute -top-3 right-2 bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-bold hidden shadow-md">
+                        AI 標記: 業配 (信心 98%)
+                    </div>
+                    <span class="text-xs font-mono text-gray-500 mr-2" id="time-ad">0:45 - 1:15</span>
+                    在我們正式進入評測前，先感謝 NordVPN 贊助本期影片！你知道現在出國連公用 Wi-Fi 有多危險嗎？駭客隨時可能竊取你的密碼。透過 NordVPN，只需一鍵就能隱藏你的 IP，而且現在點擊下方專屬連結，輸入我的折扣碼，就能享有買兩年送三個月的超殺優惠喔！保護隱私就趁現在！
+                </div>
+
+                <!-- Part 3: 回歸正題 -->
+                <div id="text-p3" class="p-3 rounded-lg border border-transparent transition-colors relative cursor-pointer hover:bg-gray-800/50" onclick="seekToText(75)">
+                    <span class="text-xs font-mono text-gray-500 mr-2">1:16 - 3:00</span>
+                    好的，業配結束，我們馬上回到重點。先來看看這台手機的外觀設計，這次背板採用了全新的磨砂玻璃材質，手感真的非常好，完全不沾指紋... (繼續解說內容)
+                </div>
+            </div>
+
+            <!-- AI 判斷日誌 (隱藏，分析後顯示) -->
+            <div id="ai-log" class="absolute bottom-0 w-full bg-gray-900 border-t border-gray-800 p-4 transform translate-y-full transition-transform duration-500">
+                <div class="text-xs font-mono text-green-400 mb-1">>> LLM Response parsed successfully</div>
+                <div class="text-sm font-bold text-gray-200">偵測到 1 筆工商段落</div>
+                <ul class="text-xs text-gray-400 mt-2 space-y-1">
+                    <li>• <span class="text-yellow-500">片段 0:45 - 1:15</span> | 關鍵字特徵: "贊助本期", "折扣碼", "下方專屬連結"</li>
+                    <li>• 建議動作: 強制跳轉 (Seek to 1:15)</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 初始化 Icons
+        lucide.createIcons();
+
+        // 狀態變數
+        let isPlaying = false;
+        let currentTime = 0; // 0 to 180 seconds (3 mins)
+        const totalDuration = 180;
+        let playInterval;
+        let isAnalyzed = false;
+        let autoSkip = true;
+
+        // 業配時間軸設定 (模擬 AI 解析出的結果)
+        const adStart = 45; // 0:45
+        const adEnd = 75;   // 1:15
+
+        // DOM 元素
+        const playBtn = document.getElementById('btn-play');
+        const playIcon = document.getElementById('play-icon');
+        const timeDisplay = document.getElementById('time-display');
+        const progressFill = document.getElementById('progress-fill');
+        const progressContainer = document.getElementById('progress-container');
+        const statusIcon = document.getElementById('status-icon');
+        const videoText = document.getElementById('video-text');
+        
+        const btnAnalyze = document.getElementById('btn-analyze');
+        const textAd = document.getElementById('text-ad');
+        const adBadge = document.getElementById('ad-badge');
+        const adMarker = document.getElementById('ad-marker');
+        const aiStatusBadge = document.getElementById('ai-status-badge');
+        const aiLog = document.getElementById('ai-log');
+        
+        const toggleSkip = document.getElementById('toggle-skip');
+        const toggleKnob = document.getElementById('toggle-knob');
+        const skipToast = document.getElementById('skip-toast');
+
+        const videoScanLine = document.getElementById('video-scan-line');
+        const textScanLine = document.getElementById('text-scan-line');
+
+        // 時間格式化工具 (mm:ss)
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        // 更新介面
+        function updateUI() {
+            // 更新進度條與文字
+            timeDisplay.innerText = `${formatTime(currentTime)} / 3:00`;
+            progressFill.style.width = `${(currentTime / totalDuration) * 100}%`;
+
+            // 同步逐字稿的高亮狀態 (哪一段正在播放)
+            document.getElementById('text-p1').classList.remove('text-white');
+            document.getElementById('text-ad').classList.remove('text-white');
+            document.getElementById('text-p3').classList.remove('text-white');
+
+            if (currentTime < adStart) {
+                document.getElementById('text-p1').classList.add('text-white');
+            } else if (currentTime >= adStart && currentTime < adEnd) {
+                document.getElementById('text-ad').classList.add('text-white');
+            } else {
+                document.getElementById('text-p3').classList.add('text-white');
+            }
+        }
+
+        // 播放循環
+        function playLoop() {
+            if (currentTime >= totalDuration) {
+                pauseVideo();
+                currentTime = totalDuration;
+                updateUI();
+                return;
+            }
+
+            // AI 自動跳躍邏輯的核心！！！
+            if (isAnalyzed && autoSkip && currentTime >= adStart && currentTime < adEnd) {
+                // 觸發跳躍
+                currentTime = adEnd;
+                showSkipToast();
+            } else {
+                // 為了讓展示有感，我們以 5 倍速模擬播放 (每次加 0.5 秒，100ms 執行一次)
+                currentTime += 0.5; 
+            }
+            updateUI();
+        }
+
+        function playVideo() {
+            isPlaying = true;
+            playIcon.setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+            statusIcon.setAttribute('data-lucide', 'film');
+            videoText.innerText = "影片播放中...";
+            lucide.createIcons();
+            playInterval = setInterval(playLoop, 100);
+        }
+
+        function pauseVideo() {
+            isPlaying = false;
+            playIcon.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+            statusIcon.setAttribute('data-lucide', 'pause-circle');
+            videoText.innerText = "已暫停";
+            lucide.createIcons();
+            clearInterval(playInterval);
+        }
+
+        // 顯示跳躍提示
+        function showSkipToast() {
+            skipToast.classList.remove('opacity-0');
+            skipToast.classList.add('toast-enter');
+            
+            // 播放器視覺特效
+            statusIcon.setAttribute('data-lucide', 'fast-forward');
+            lucide.createIcons();
+            statusIcon.classList.add('text-yellow-500');
+
+            setTimeout(() => {
+                skipToast.classList.add('opacity-0');
+                skipToast.classList.remove('toast-enter');
+                statusIcon.setAttribute('data-lucide', 'film');
+                statusIcon.classList.remove('text-yellow-500');
+                lucide.createIcons();
+            }, 2500);
+        }
+
+        // 手動點擊逐字稿或進度條跳轉
+        window.seekToText = function(seconds) {
+            currentTime = seconds;
+            updateUI();
+            if (!isPlaying) playVideo();
+        }
+
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percent = clickX / rect.width;
+            currentTime = percent * totalDuration;
+            updateUI();
+        });
+
+        // 播放按鈕事件
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) pauseVideo();
+            else playVideo();
+        });
+
+        // 自動跳過開關事件
+        toggleSkip.addEventListener('click', () => {
+            autoSkip = !autoSkip;
+            if (autoSkip) {
+                toggleSkip.classList.replace('bg-gray-600', 'bg-yellow-600');
+                toggleKnob.classList.replace('left-[2px]', 'left-[22px]');
+            } else {
+                toggleSkip.classList.replace('bg-yellow-600', 'bg-gray-600');
+                toggleKnob.classList.replace('left-[22px]', 'left-[2px]');
+            }
+        });
+
+        // ==========================================
+        // 核心展示：AI 語意分析模擬
+        // ==========================================
+        btnAnalyze.addEventListener('click', () => {
+            if (isAnalyzed) return;
+
+            // 1. UI 變更：模擬 Loading 狀態
+            const originalText = btnAnalyze.innerHTML;
+            btnAnalyze.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>LLM 語意辨識中...</span>';
+            lucide.createIcons();
+            aiStatusBadge.innerText = "資料處理中";
+            aiStatusBadge.className = "px-2 py-1 text-xs rounded-full bg-blue-900/50 text-blue-400 border border-blue-800 animate-pulse";
+            
+            videoScanLine.style.display = 'block';
+            textScanLine.style.display = 'block';
+
+            // 2. 模擬 API 延遲 (2.5秒後回傳結果)
+            setTimeout(() => {
+                isAnalyzed = true;
+                
+                // 恢復按鈕狀態
+                btnAnalyze.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i><span>分析完成</span>';
+                btnAnalyze.classList.replace('bg-blue-600', 'bg-green-600');
+                btnAnalyze.classList.replace('hover:bg-blue-500', 'hover:bg-green-500');
+                lucide.createIcons();
+                
+                // 更新狀態標籤
+                aiStatusBadge.innerText = "廣告已標記";
+                aiStatusBadge.className = "px-2 py-1 text-xs rounded-full bg-green-900/50 text-green-400 border border-green-800";
+                
+                // 停止掃描動畫
+                videoScanLine.style.display = 'none';
+                textScanLine.style.display = 'none';
+
+                // 3. UI 變更：顯示 AI 標記結果
+                // 在時間軸畫上紅/黃色區塊
+                adMarker.style.display = 'block';
+                adMarker.style.left = `${(adStart / totalDuration) * 100}%`;
+                adMarker.style.width = `${((adEnd - adStart) / totalDuration) * 100}%`;
+
+                // 改變逐字稿的業配段落樣式
+                textAd.classList.add('ad-bg-active');
+                document.getElementById('time-ad').classList.replace('text-gray-500', 'text-yellow-500');
+                adBadge.classList.remove('hidden');
+
+                // 顯示 AI 解析日誌面板 (從底部滑出)
+                aiLog.classList.remove('translate-y-full');
+
+            }, 2500);
+        });
+
+        // 初始更新 UI
+        updateUI();
+
+    </script>
+</body>
+</html>
