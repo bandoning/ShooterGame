@@ -23,3 +23,8 @@ https://pubmed.ncbi.nlm.nih.gov/41885866/
 
 SURMOUNT-4 臨床試驗：針對「停藥效應」的關鍵研究。分析指出，在初期 36 週治療後若將猛健樂換成安慰劑，多數受試者會經歷體重反彈，且反彈的程度與停藥後心血管代謝指標的惡化呈正相關（PubMed, 2026）。
 https://pubmed.ncbi.nlm.nih.gov/41284285/
+
+以前我也都選代糖，不過看到研究有提到就算只攝取安全量的15%，也會引發焦慮、記憶力降低。還會傳給下一代。我目前是先不太碰了。
+[1] https://pubmed.ncbi.nlm.nih.gov/36459641/
+[2] https://pubmed.ncbi.nlm.nih.gov/37652922/
+[3] https://pubmed.ncbi.nlm.nih.gov/42039882/
